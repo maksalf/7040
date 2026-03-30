@@ -1,0 +1,491 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>CRM Mobile</title>
+  <style>
+    html, body { width:100%; overflow-x:hidden; margin:0; padding:0; }
+    body { font-family:Arial,sans-serif; background:#f5f7fa; color:#111; }
+    .wrap { width:100%; max-width:100%; margin:0; padding:8px; box-sizing:border-box; }
+
+    .card { background:#fff; border-radius:12px; padding:10px; margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+    input, textarea, select, button {
+      width:100%; box-sizing:border-box; padding:8px; border-radius:8px;
+      border:1px solid #d1d5db; font-size:15px; background:#fff;
+    }
+    textarea { min-height:80px; }
+    button { border:none; background:#2563eb; color:#fff; font-weight:700; cursor:pointer; }
+
+    .tabBtn { background:#374151; }
+    .secondaryBtn { background:#6b7280; }
+
+    .item {
+      padding:10px; border:1px solid #e5e7eb; border-radius:8px;
+      margin-bottom:8px; background:#fff; cursor:pointer;
+    }
+
+    .meta { font-size:12px; color:#6b7280; }
+    .muted { color:#6b7280; font-size:12px; }
+    .label {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size:11px;
+      font-weight:700;
+      color:#6b7280;
+      margin:6px 0 4px;
+      text-transform:uppercase;
+    }
+
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    @media (max-width:700px){ .grid2 { grid-template-columns:1fr; } }
+
+    .chips{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0;}
+    .chip{
+      width:auto; padding:6px 10px; border-radius:999px; font-size:12px;
+      border:1px solid #d1d5db; background:#fff; color:#111; font-weight:700;
+    }
+
+    .saveState { margin-top:8px; font-size:13px; font-weight:700; }
+    .saveState.dirty { color:#b45309; }
+    .saveState.saved { color:#065f46; }
+
+    .collapsibleHead{
+      display:flex; justify-content:space-between; align-items:center; gap:8px;
+      margin-top:8px;
+    }
+    .collapsibleBody{ display:none; margin-top:8px; }
+    .collapsibleBody.open{ display:block; }
+
+    /* report */
+    .sectionTitle{ font-size:14px; font-weight:700; margin:10px 0 8px; }
+    .tileGrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    @media (max-width:700px){ .tileGrid { grid-template-columns:1fr; } }
+    .tile{ border:1px solid #e5e7eb; border-radius:12px; padding:8px; background:#fff; }
+    .tileLabel{ font-size:12px; color:#6b7280; margin-bottom:4px; line-height:1.25; }
+    .tileValue{ font-size:24px; font-weight:800; color:#111827; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="card">
+    <div style="display:flex; gap:8px;">
+      <button class="tabBtn" type="button" onclick="openTab('crm')">CRM</button>
+      <button class="tabBtn" type="button" onclick="openTab('report')">Звіт</button>
+    </div>
+  </div>
+
+  <div id="tab-crm">
+    <div class="card">
+      <h3 style="margin:0 0 8px 0;">Пошук</h3>
+      <input id="q" placeholder="ПІБ, телефон, лікарня..." />
+      <div style="height:8px"></div>
+      <button type="button" onclick="searchRows()">Знайти</button>
+      <div id="searchStatus" class="muted" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 8px 0;">Результати</h3>
+      <div id="results"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 6px 0;">Швидке редагування</h3>
+      <div class="muted">Рядок: <span id="rowNo">—</span></div>
+
+      <div class="chips">
+        <button type="button" class="chip" onclick="setToday('lastCommunicationDate')">Сьогодні контакт</button>
+        <button type="button" class="chip" onclick="setToday('lastMeetingDate')">Сьогодні візит</button>
+      </div>
+
+      <div class="grid2">
+        <div><div class="label">ПІБ</div><input id="pib" disabled /></div>
+        <div><div class="label">Телефон</div><input id="phone" disabled /></div>
+      </div>
+
+      <div class="grid2">
+        <div><div class="label">Статус супроводження</div><input id="supportStatus" /></div>
+        <div><div class="label">Поточний статус в/с</div><input id="currentStatus" /></div>
+      </div>
+
+      <div class="grid2">
+        <div><div class="label">Лікарня</div><input id="hospital" /></div>
+        <div><div class="label">Населений пункт</div><input id="city" /></div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <div class="label">Дата останнього спілкування</div>
+          <input id="lastCommunicationDate" placeholder="YYYY-MM-DD" />
+        </div>
+        <div>
+          <div class="label">Дата останнього відвідування</div>
+          <input id="lastMeetingDate" placeholder="YYYY-MM-DD" />
+        </div>
+      </div>
+
+      <div class="collapsibleHead">
+        <div class="label" style="margin:0;">Додатково</div>
+        <button class="secondaryBtn" type="button" style="width:auto;padding:8px 12px;" onclick="toggleExtra()">Показати / Сховати</button>
+      </div>
+
+      <div id="extraBlock" class="collapsibleBody">
+        <div class="grid2">
+          <div><div class="label">Ф100</div><select id="f100"></select></div>
+          <div><div class="label">Ф5</div><select id="f5"></select></div>
+        </div>
+        <div class="grid2">
+          <div><div class="label">Ф6</div><select id="f6"></select></div>
+          <div><div class="label">УБД</div><select id="ubd"></select></div>
+        </div>
+        <div><div class="label">Коментар</div><textarea id="comment"></textarea></div>
+      </div>
+
+      <div style="height:8px"></div>
+      <button type="button" onclick="saveQuick()">Зберегти</button>
+      <div id="saveState" class="saveState saved">Змін немає</div>
+      <div id="saveStatus" class="muted" style="margin-top:4px"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 8px 0;">WhatsApp</h3>
+      <div class="label">Шаблон повідомлення</div>
+      <select id="waTemplate">
+        <option value="new_wounded">Нове поранення</option>
+        <option value="treatment_control">Контроль лікування</option>
+        <option value="docs_control">Контроль документів</option>
+        <option value="quick_message">Швидке повідомлення</option>
+      </select>
+      <div style="height:8px"></div>
+      <button type="button" onclick="openWhatsApp()">Відкрити WhatsApp</button>
+      <div id="waStatus" class="muted" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <div id="tab-report" style="display:none;">
+    <div class="card">
+      <h3 style="margin:0 0 8px 0;">Звіт 112</h3>
+      <button type="button" onclick="loadReportTab()">Оновити звіт</button>
+      <div id="reportContent" class="muted" style="margin-top:10px;">Натисни "Оновити звіт"</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var selectedRow = null;
+var initialSnapshot = '';
+
+function byId(id){ return document.getElementById(id); }
+function val(id){ var e = byId(id); return e ? String(e.value || '').trim() : ''; }
+function setv(id, v){ var e = byId(id); if (e) e.value = v || ''; }
+
+function esc(s){
+  return String(s || '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#039;');
+}
+
+function openTab(name){
+  byId('tab-crm').style.display = (name === 'crm') ? 'block' : 'none';
+  byId('tab-report').style.display = (name === 'report') ? 'block' : 'none';
+  if (name === 'report') loadReportTab();
+}
+
+function toggleExtra(){
+  var b = byId('extraBlock');
+  if (!b) return;
+  b.className = (b.className.indexOf('open') >= 0) ? 'collapsibleBody' : 'collapsibleBody open';
+}
+
+function setToday(id){
+  var d = new Date();
+  var y = d.getFullYear();
+  var m = ('0' + (d.getMonth()+1)).slice(-2);
+  var day = ('0' + d.getDate()).slice(-2);
+  setv(id, y + '-' + m + '-' + day);
+  markDirty();
+}
+
+function getSnapshot(){
+  return JSON.stringify({
+    supportStatus: val('supportStatus'),
+    currentStatus: val('currentStatus'),
+    hospital: val('hospital'),
+    city: val('city'),
+    lastCommunicationDate: val('lastCommunicationDate'),
+    lastMeetingDate: val('lastMeetingDate'),
+    f100: val('f100'),
+    f5: val('f5'),
+    f6: val('f6'),
+    ubd: val('ubd'),
+    comment: val('comment')
+  });
+}
+
+function setSnapshot(){
+  initialSnapshot = getSnapshot();
+  markDirty();
+}
+
+function markDirty(){
+  var dirty = (getSnapshot() !== initialSnapshot);
+  var el = byId('saveState');
+  if (!el) return;
+  if (dirty){
+    el.className = 'saveState dirty';
+    el.innerText = 'Є незбережені зміни';
+  } else {
+    el.className = 'saveState saved';
+    el.innerText = 'Змін немає';
+  }
+}
+
+function fillSelect(id, list, selected, placeholder){
+  var el = byId(id);
+  if (!el) return;
+  var arr = Array.isArray(list) ? list : [];
+  if (!arr.length && selected) arr = [selected];
+
+  var html = '<option value="">' + (placeholder || '— оберіть —') + '</option>';
+  for (var i=0;i<arr.length;i++){
+    var v = String(arr[i] || '');
+    html += '<option value="' + esc(v) + '">' + esc(v) + '</option>';
+  }
+  el.innerHTML = html;
+  if (selected) el.value = selected;
+}
+
+function loadDocDropdowns(cardData){
+  google.script.run
+    .withSuccessHandler(function(d){
+      d = d || {};
+      fillSelect('f100', d.f100 || [], cardData.f100, 'Ф100 — оберіть');
+      fillSelect('f5', d.f5 || [], cardData.f5, 'Ф5 — оберіть');
+      fillSelect('f6', d.f6 || [], cardData.f6, 'Ф6 — оберіть');
+      fillSelect('ubd', d.ubd || [], cardData.ubd, 'УБД — оберіть');
+      setSnapshot();
+    })
+    .withFailureHandler(function(err){
+      byId('saveStatus').innerText = 'Помилка опцій: ' + (err && err.message ? err.message : err);
+    })
+    .CRM_mobile_getDocOptions();
+}
+
+function searchRows(){
+  var q = val('q');
+  if(!q){ byId('searchStatus').innerText = 'Введи запит'; return; }
+
+  byId('searchStatus').innerText = 'Пошук...';
+  google.script.run
+    .withSuccessHandler(function(items){
+      var box = byId('results');
+      if(!items || !items.length){
+        box.innerHTML = '<div class="muted">Нічого не знайдено</div>';
+      } else {
+        var out = '';
+        for (var i=0;i<items.length;i++){
+          var it = items[i];
+          out += '<div class="item" onclick="openRow(' + it.row + ')">' +
+                 '<div><b>' + esc(it.pib || 'Без ПІБ') + '</b></div>' +
+                 '<div class="meta">Рядок ' + it.row + ' | ' + esc(it.phone || '') + ' | ' + esc(it.status || '') + '</div>' +
+                 '</div>';
+        }
+        box.innerHTML = out;
+      }
+      byId('searchStatus').innerText = 'Готово';
+    })
+    .withFailureHandler(function(err){
+      byId('searchStatus').innerText = 'Помилка: ' + (err && err.message ? err.message : err);
+    })
+    .CRM_mobile_searchRows(q);
+}
+
+function openRow(row){
+  selectedRow = Number(row);
+  byId('rowNo').innerText = selectedRow;
+
+  google.script.run
+    .withSuccessHandler(function(res){
+      var c = (res && res.cardData) ? res.cardData : {};
+      setv('pib', c.pib);
+      setv('phone', c.phone);
+      setv('supportStatus', c.supportStatus);
+      setv('currentStatus', c.currentStatus);
+      setv('hospital', c.hospital);
+      setv('city', c.city);
+      setv('lastCommunicationDate', c.lastCommunicationDate);
+      setv('lastMeetingDate', c.lastMeetingDate);
+      setv('comment', c.comment);
+
+      loadDocDropdowns(c);
+      byId('saveStatus').innerText = 'Картку завантажено';
+    })
+    .withFailureHandler(function(err){
+      byId('saveStatus').innerText = 'Помилка: ' + (err && err.message ? err.message : err);
+    })
+    .CRM_mobile_getCard(selectedRow);
+}
+
+function saveQuick(){
+  if(!selectedRow){
+    byId('saveStatus').innerText = 'Спочатку обери запис';
+    return;
+  }
+
+  byId('saveStatus').innerText = 'Збереження...';
+
+  var payload = {
+    sheetName: 'Поранені',
+    row: selectedRow,
+    supportStatus: val('supportStatus'),
+    currentStatus: val('currentStatus'),
+    hospital: val('hospital'),
+    city: val('city'),
+    lastCommunicationDate: val('lastCommunicationDate'),
+    lastMeetingDate: val('lastMeetingDate'),
+    f100: val('f100'),
+    f5: val('f5'),
+    f6: val('f6'),
+    ubd: val('ubd'),
+    comment: val('comment')
+  };
+
+  google.script.run
+    .withSuccessHandler(function(msg){
+      var t = new Date();
+      byId('saveStatus').innerText = (msg || 'Збережено') + ' • ' + t.toLocaleTimeString();
+      setSnapshot();
+    })
+    .withFailureHandler(function(err){
+      byId('saveStatus').innerText = 'Помилка: ' + (err && err.message ? err.message : err);
+    })
+    .CRM_mobile_saveQuick(payload);
+}
+
+function openWhatsApp(){
+  var rawPhone = val('phone');
+  var pib = val('pib');
+  var hospital = val('hospital');
+  var city = val('city');
+  var t = byId('waTemplate').value;
+
+  if(!rawPhone){
+    byId('waStatus').innerText = 'Немає телефону';
+    return;
+  }
+
+  var digits = rawPhone.replace(/\D/g,'');
+  if(digits.length === 10 && digits.charAt(0) === '0') digits = '38' + digits;
+  if(!(digits.length === 12 && digits.indexOf('380') === 0)){
+    byId('waStatus').innerText = 'Некоректний номер';
+    return;
+  }
+
+  var greeting = pib ? ('Вітаю, ' + pib + '!') : 'Вітаю!';
+  var message = '';
+
+  if(t === 'new_wounded'){
+    message = greeting + '\n\nЗ вами зв’язується служба супроводу 112 ОБрТрО...';
+  } else if(t === 'treatment_control'){
+    var loc = (hospital && city) ? ('За нашими даними, ви перебуваєте у ' + hospital + ', м. ' + city + '.\n') : '';
+    message = greeting + '\n\nЦе служба супроводу 112 ОБрТрО.\n' + loc;
+  } else if(t === 'docs_control'){
+    message = greeting + '\n\nПросимо уточнити інформацію щодо документів (Ф100, Ф5, Ф6, УБД).';
+  } else {
+    message = greeting + '\n\nЦе служба супроводу 112 ОБрТрО.';
+  }
+
+  window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(message), '_blank');
+}
+
+function tile(label, value){
+  return '<div class="tile"><div class="tileLabel">' + esc(label) + '</div><div class="tileValue">' + (value == null ? 0 : value) + '</div></div>';
+}
+
+function loadReportTab(){
+  var box = byId('reportContent');
+  box.innerHTML = 'Розрахунок...';
+
+  google.script.run
+    .withSuccessHandler(function(r){
+      if (!r) { box.innerHTML = 'Немає даних'; return; }
+
+      box.innerHTML =
+        '<div class="sectionTitle">2) Динаміка за тиждень</div>' +
+        '<div class="tileGrid">' +
+          tile('Нові за тиждень — Легкі', r.week.light) +
+          tile('Нові за тиждень — Тяжкі', r.week.heavy) +
+          tile('Нові за тиждень — Уточнюється', r.week.unknown) +
+        '</div>' +
+
+        '<div class="sectionTitle">3) Супровід за 30 днів</div>' +
+        '<div class="tileGrid">' +
+          tile('Спілкування', r.m30.comm) +
+          tile('Відвідувань', r.m30.visit) +
+          tile('Нові за 30 днів — легкі', r.m30.newLight) +
+          tile('Нові за 30 днів — тяжкі', r.m30.newHeavy) +
+          tile('Нові за 30 днів — уточнюється', r.m30.newUnknown) +
+        '</div>' +
+
+        '<div class="sectionTitle">4) Стан супроводу В/С</div>' +
+        '<div class="tileGrid">' +
+          tile('Статус "Завершено"', r.status.done) +
+          tile('Статус "В роботі"', r.status.work) +
+          tile('Статус "Не звʼязалися"', r.status.noContact) +
+          tile('Статус "Новий"', r.status.fresh) +
+        '</div>' +
+
+        '<div class="sectionTitle">5) Розподіл у роботі</div>' +
+        '<div class="tileGrid">' +
+          tile('Легкі у роботі', r.inWork.light) +
+          tile('Тяжкі у роботі', r.inWork.heavy) +
+          tile('Не визначено у роботі', r.inWork.unknown) +
+          tile('Всього в/с у роботі', r.inWork.total) +
+          tile('Не в роботі', r.inWork.notWork) +
+        '</div>' +
+
+        '<div class="sectionTitle">6) Локація</div>' +
+        '<div class="tileGrid">' + tile('Київ', r.location.kyiv) + '</div>' +
+
+        '<div class="sectionTitle">7) Медична документація</div>' +
+        '<div class="tileGrid">' +
+          tile('Ф5 наявна', r.docs.f5Yes) +
+          tile('Ф5 відсутня', r.docs.f5No) +
+          tile('В/С з ампутаціями', r.docs.amputation) +
+          tile('Отримують виплати', r.docs.reward) +
+        '</div>' +
+
+        '<div class="sectionTitle">8) Лікування та реабілітація</div>' +
+        '<div class="tileGrid">' +
+          tile('Легкі (Україна)', r.rehab.uaLight) +
+          tile('Тяжкі (Україна)', r.rehab.uaHeavy) +
+          tile('Уточнення (Україна)', r.rehab.uaUnknown) +
+          tile('На лікуванні в Україні', r.rehab.treatmentUa) +
+          tile('На реабілітації в Україні', r.rehab.rehabUa) +
+          tile('На лікуванні за кордоном', r.rehab.treatmentAbroad) +
+          tile('На реабілітації за кордоном', r.rehab.rehabAbroad) +
+          tile('Померли', r.rehab.dead) +
+          tile('Вибули до частини', r.rehab.finished) +
+          tile('Всього у медзакладах', r.rehab.inMedicalTotal) +
+          tile('Відпустка за станом здоровʼя', r.rehab.healthLeave) +
+        '</div>';
+    })
+    .withFailureHandler(function(err){
+      box.innerHTML = 'Помилка звіту: ' + (err && err.message ? err.message : err);
+    })
+    .CRM_mobile_getReport112();
+}
+
+document.addEventListener('input', function(e){
+  var ids = ['supportStatus','currentStatus','hospital','city','lastCommunicationDate','lastMeetingDate','f100','f5','f6','ubd','comment'];
+  if (ids.indexOf(e.target.id) >= 0) markDirty();
+});
+</script>
+</body>
+</html>
